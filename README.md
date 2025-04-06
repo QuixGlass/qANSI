@@ -6,7 +6,7 @@
 
 A lightweight yet powerful Arduino library for enhancing serial output with ANSI colors, text styling, and advanced terminal control. Use qANSI to make your Arduino project's serial output more informative, interactive, and visually appealing.
 
-![qANSI Demo](https://via.placeholder.com/800x400?text=qANSI+Demo+Screenshot)
+![qANSI Demo](https://i.postimg.cc/qMb9jCxp/Screenshot-from-2025-04-06-15-17-47.png)
 
 ## Features
 
