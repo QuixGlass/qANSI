@@ -4,41 +4,36 @@ A powerful yet compact library for controlling ANSI terminals from Arduino, prov
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## � Features
+## 📋 Features
 
 ### qANSI - Basic ANSI Terminal Control
-- � **Text Formatting**: Full support for colors, bold, underline, blink, and inverse text
-- � **Cursor Control**: Position, hide/show, and move cursor in any direction
-- � **Screen Operations**: Clear screen, lines, or specific regions
-- � **Minimal Footprint**: Efficient implementation for resource-constrained environments
-- � **Print Integration**: Inherits from Arduino's Print class for seamless integration
-- � **State Tracking**: Minimizes commands by tracking terminal state
-- � **Pipe Codes**: BBS-style color codes using the `|` character (e.g., `|04` for red text)
+- 🔠 **Text Formatting**: Full support for colors, bold, underline, blink, and inverse text
+- 🎮 **Cursor Control**: Position, hide/show, and move cursor in any direction
+- 🧹 **Screen Operations**: Clear screen, lines, or specific regions
+- 💾 **Minimal Footprint**: Efficient implementation for resource-constrained environments
+- 📝 **Print Integration**: Inherits from Arduino's Print class for seamless integration
+- 🔄 **State Tracking**: Minimizes commands by tracking terminal state
+- 🎨 **Pipe Codes**: BBS-style color codes using the `|` character (e.g., `|04` for red text)
 
 ### qANSI_VT - Virtual Terminal System
-- � **Buffer Management**: In-memory representation with smart updates
-- � **Change Detection**: Only updates cells that have changed since last refresh
-- � **Virtual Positioning**: Place virtual terminals anywhere on the physical screen
-- � **Scrolling**: Content overflow support with configurable behavior
+- 📊 **Buffer Management**: In-memory representation with smart updates
+- 🔍 **Change Detection**: Only updates cells that have changed since last refresh
+- 🌐 **Virtual Positioning**: Place virtual terminals anywhere on the physical screen
+- 📜 **Scrolling**: Content overflow support with configurable behavior
 - ↩️ **Line Wrapping**: Automatic text wrapping with configurable behavior
-- � **Multiple Terminals**: Run several independent virtual terminals simultaneously
+- 🎯 **Multiple Terminals**: Run several independent virtual terminals simultaneously
 - ⚡ **Adaptive Rendering**: Automatically selects optimal update strategy based on change patterns
 
-## �️ Installation
+## 🛠️ Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/qANSI.git
+git clone https://github.com/QuixGlass/qANSI.git
 
 # Or manually download and add to your Arduino libraries folder
 ```
 
-Alternatively:
-1. Download the ZIP archive
-2. In the Arduino IDE: Sketch > Include Library > Add .ZIP Library
-3. Select the downloaded ZIP file
-
-## � Basic Usage
+## 🚀 Basic Usage
 
 ### Simple Terminal Control
 
@@ -118,7 +113,7 @@ void loop() {
 }
 ```
 
-## � Advanced Features
+## 🧩 Advanced Features
 
 ### Multiple Virtual Terminals
 
@@ -263,14 +258,14 @@ The appropriate strategy is chosen based on:
 
 This approach minimizes the bandwidth required for terminal updates while maintaining visual consistency.
 
-## � Memory Usage
+## 📊 Memory Usage
 
 - **qANSI**: Minimal footprint (under 200 bytes RAM)
 - **qANSI_VT**: Memory usage depends on terminal size
   - Formula: RAM usage ≈ width × height × sizeof(AnsiCell)
   - Example: a 40×10 terminal requires approximately 200 bytes
 
-## � API Reference
+## 📚 API Reference
 
 ### qANSI Class
 
@@ -355,7 +350,7 @@ void display();
 void debugPrint(const char *str);
 ```
 
-## � Contributing
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
@@ -365,11 +360,11 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## � License
+## 📜 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
-## � Acknowledgments
+## 🙏 Acknowledgments
 
 - Inspired by ANSI terminal control systems used in BBS software
 - Thanks to the Arduino community for their continuous support and inspiration
