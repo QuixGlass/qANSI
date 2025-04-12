@@ -1,31 +1,44 @@
 # qANSI - Lightweight ANSI Terminal Control Library for Arduino
 
-qANSI is a lightweight yet powerful library for controlling ANSI terminals from Arduino. It provides direct terminal operations and virtual terminal support with optimized rendering.
+A powerful yet compact library for controlling ANSI terminals from Arduino, providing both direct terminal operations and virtual terminal support with optimized rendering.
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## � Features
 
 ### qANSI - Basic ANSI Terminal Control
-
-- **Direct Terminal Control**: Cursor positioning, color setting, text attributes
-- **Minimal Memory Footprint**: Efficient implementation for resource-constrained environments
-- **Standard Integration**: Inherits from Arduino's Print class for familiar interface
-- **State Tracking**: Intelligent tracking of terminal state to minimize commands
+- � **Text Formatting**: Full support for colors, bold, underline, blink, and inverse text
+- � **Cursor Control**: Position, hide/show, and move cursor in any direction
+- � **Screen Operations**: Clear screen, lines, or specific regions
+- � **Minimal Footprint**: Efficient implementation for resource-constrained environments
+- � **Print Integration**: Inherits from Arduino's Print class for seamless integration
+- � **State Tracking**: Minimizes commands by tracking terminal state
+- � **Pipe Codes**: BBS-style color codes using the `|` character (e.g., `|04` for red text)
 
 ### qANSI_VT - Virtual Terminal System
+- � **Buffer Management**: In-memory representation with smart updates
+- � **Change Detection**: Only updates cells that have changed since last refresh
+- � **Virtual Positioning**: Place virtual terminals anywhere on the physical screen
+- � **Scrolling**: Content overflow support with configurable behavior
+- ↩️ **Line Wrapping**: Automatic text wrapping with configurable behavior
+- � **Multiple Terminals**: Run several independent virtual terminals simultaneously
+- ⚡ **Adaptive Rendering**: Automatically selects optimal update strategy based on change patterns
 
-- **In-Memory Buffer**: Represents the terminal state in memory for optimal updates
-- **Change Detection**: Only sends ANSI commands for cells that have changed
-- **Multiple Update Strategies**: Adaptive rendering based on change patterns
-- **Position Anywhere**: Place virtual terminals anywhere on the physical screen
-- **Scrolling & Wrapping**: Full support for content overflow with configurable behaviors
+## �️ Installation
 
-## Installation
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/qANSI.git
 
-1. Download the repository
-2. Copy the `qANSI.h` and `qANSI_VT.h` files to your project directory
-3. Include the headers in your sketch
+# Or manually download and add to your Arduino libraries folder
+```
 
-## Basic Usage
+Alternatively:
+1. Download the ZIP archive
+2. In the Arduino IDE: Sketch > Include Library > Add .ZIP Library
+3. Select the downloaded ZIP file
+
+## � Basic Usage
 
 ### Simple Terminal Control
 
@@ -105,7 +118,9 @@ void loop() {
 }
 ```
 
-## Multiple Virtual Terminals
+## � Advanced Features
+
+### Multiple Virtual Terminals
 
 ```cpp
 #include "qANSI.h"
@@ -156,19 +171,45 @@ void loop() {
 }
 ```
 
-## Advanced Features
+### Using Pipe Codes for Colored Text
+
+```cpp
+qANSI terminal(Serial);
+
+void setup() {
+  Serial.begin(115200);
+  terminal.begin();
+  terminal.clearScreen();
+  
+  // Enable pipe code processing (enabled by default)
+  terminal.enablePipeCodes(true);
+  
+  // Print colored text using pipe codes
+  terminal.println("|04Red text |02Green text |15White text");
+  
+  // Bold text with different colors
+  terminal.println("|25|12Bold red |10Bold green|RA");
+}
+```
 
 ### Line Wrapping and Scrolling
 
 ```cpp
-// Enable automatic line wrapping
+// Enable automatic line wrapping (on by default)
 vt.setLineWrapping(true);
 
-// Enable automatic scrolling when cursor moves past bottom
+// Enable automatic scrolling when cursor moves past bottom (on by default)
 vt.setScrolling(true);
 
 // Manually scroll up by 2 lines
 vt.scrollUp(2);
+
+// Write text that automatically wraps and scrolls
+for(int i = 0; i < 20; i++) {
+  vt.print("This is line ");
+  vt.println(i);
+}
+vt.display();
 ```
 
 ### Cursor Control
@@ -183,25 +224,152 @@ vt.setCursor(10, 5);
 // Get current cursor position
 uint8_t x = vt.getCursorX();
 uint8_t y = vt.getCursorY();
+
+// Save and restore cursor position
+vt.saveCursor();
+// Do some other drawing...
+vt.restoreCursor();
 ```
 
-### Debug Mode
+### Direct Cell Access
+
+```cpp
+// Get the character at a specific position
+char c = vt.getCharAt(5, 3);  // Get character at column 5, row 3
+
+// Force a complete redraw (useful after major changes)
+vt.forceFullRedraw();
+```
+
+### Debug Utilities
 
 ```cpp
 // Print with detailed cursor movement tracing
 vt.debugPrint("This will trace every character");
 ```
 
-## Optimization Notes
+## ⚙️ Performance Optimization
 
-The virtual terminal implementation uses three different update strategies to optimize performance:
+The virtual terminal implementation automatically selects one of three update strategies for optimal performance:
 
-1. **Full Redraw**: Used when most cells have changed or on first display
+1. **Full Redraw**: When most cells have changed or on first display
 2. **Row-Based Update**: Redraws entire rows that contain any changes
 3. **Sparse Update**: Targets only specific changed cells when changes are minimal
 
-These strategies are automatically selected based on the pattern of changes to minimize the amount of data sent to the terminal.
+The appropriate strategy is chosen based on:
+- Number of changed cells
+- Pattern of changes
+- Special conditions like border changes
 
-## License
+This approach minimizes the bandwidth required for terminal updates while maintaining visual consistency.
 
-MIT License
+## � Memory Usage
+
+- **qANSI**: Minimal footprint (under 200 bytes RAM)
+- **qANSI_VT**: Memory usage depends on terminal size
+  - Formula: RAM usage ≈ width × height × sizeof(AnsiCell)
+  - Example: a 40×10 terminal requires approximately 200 bytes
+
+## � API Reference
+
+### qANSI Class
+
+```cpp
+// Constructor
+qANSI(Stream &output = Serial);
+
+// Initialization
+void begin(uint8_t defaultFg = qANSI_Colors::FG_DEFAULT, 
+           uint8_t defaultBg = qANSI_Colors::BG_DEFAULT);
+
+// Screen control
+void clearScreen();
+void clearToEndOfScreen();
+void clearToEndOfLine();
+
+// Cursor control
+void setCursor(uint8_t col, uint8_t row);
+void cursorUp(uint8_t lines = 1);
+void cursorDown(uint8_t lines = 1);
+void cursorRight(uint8_t cols = 1);
+void cursorLeft(uint8_t cols = 1);
+void setCursorVisible(bool visible);
+bool isCursorVisible() const;
+void saveCursor();
+void restoreCursor();
+
+// Text appearance
+void setTextColor(uint8_t fg);
+void setTextBackgroundColor(uint8_t bg);
+void setTextColor(uint8_t fg, uint8_t bg);
+void setTextAttribute(uint8_t attr);
+void resetAttributes();
+
+// Pipe code control
+void enablePipeCodes(bool enable);
+bool arePipeCodesEnabled() const;
+
+// State access
+uint8_t getCurrentFgColor() const;
+uint8_t getCurrentBgColor() const;
+uint8_t getCurrentAttribute() const;
+```
+
+### qANSI_VT Class
+
+```cpp
+// Constructor
+qANSI_VT(uint8_t width, uint8_t height, uint8_t posX = 1, uint8_t posY = 1, 
+         Stream &output = Serial);
+
+// Initialization
+void begin(uint8_t defaultFg = qANSI_Colors::FG_DEFAULT,
+           uint8_t defaultBg = qANSI_Colors::BG_DEFAULT);
+void clear(bool clearPhysical = true);
+
+// Positioning
+void setPosition(uint8_t x, uint8_t y);
+uint8_t getPositionX() const;
+uint8_t getPositionY() const;
+
+// Cursor control
+void setCursor(uint8_t col, uint8_t row);
+uint8_t getCursorX() const;
+uint8_t getCursorY() const;
+
+// Configuration
+void setLineWrapping(bool enabled);
+bool isLineWrappingEnabled() const;
+void setScrolling(bool enabled);
+bool isScrollingEnabled() const;
+
+// Content management
+void scrollUp(uint8_t lines = 1);
+void forceFullRedraw();
+char getCharAt(uint8_t col, uint8_t row);
+
+// Display update
+void display();
+
+// Debug helpers
+void debugPrint(const char *str);
+```
+
+## � Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## � License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## � Acknowledgments
+
+- Inspired by ANSI terminal control systems used in BBS software
+- Thanks to the Arduino community for their continuous support and inspiration
