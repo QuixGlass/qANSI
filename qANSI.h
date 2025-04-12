@@ -1,18 +1,3 @@
-/*
- * qANSI.h - Quick ANSI Terminal Control Library
- * 
- * A single-header library for controlling ANSI terminals on Arduino.
- * Provides direct terminal operations without buffering.
- *
- * Features:
- * - Basic ANSI terminal control (cursor, colors, attributes)
- * - Direct output to terminal
- * - Minimal memory footprint
- * - Inherits from Arduino's Print class
- *
- * License: MIT License
- */
-
 #ifndef Q_ANSI_H
 #define Q_ANSI_H
 
@@ -68,14 +53,62 @@ namespace qANSI_Attributes {
     const uint8_t CONCEALED_OFF  = 28;
 }
 
+// --- Pipe color code definitions ---
+namespace qANSI_PipeCodes {
+    // Foreground colors (Renegade BBS style)
+    const char* FG_BLACK        = "|00";  // Black
+    const char* FG_BLUE         = "|01";  // Blue
+    const char* FG_GREEN        = "|02";  // Green
+    const char* FG_CYAN         = "|03";  // Cyan
+    const char* FG_RED          = "|04";  // Red
+    const char* FG_PURPLE       = "|05";  // Purple (Magenta)
+    const char* FG_BROWN        = "|06";  // Brown (Dark Yellow)
+    const char* FG_GREY         = "|07";  // Grey (White)
+    
+    // Bright foreground colors
+    const char* FG_DARK_GREY    = "|08";  // Dark Grey (Bright Black)
+    const char* FG_BRIGHT_BLUE  = "|09";  // Bright Blue
+    const char* FG_BRIGHT_GREEN = "|10";  // Bright Green
+    const char* FG_BRIGHT_CYAN  = "|11";  // Bright Cyan
+    const char* FG_BRIGHT_RED   = "|12";  // Bright Red
+    const char* FG_BRIGHT_PURPLE = "|13";  // Bright Purple (Bright Magenta)
+    const char* FG_YELLOW       = "|14";  // Yellow (Bright Yellow)
+    const char* FG_BRIGHT_WHITE = "|15";  // Bright White
+    
+    // Background colors
+    const char* BG_BLACK        = "|16";  // Black background
+    const char* BG_BLUE         = "|17";  // Blue background
+    const char* BG_GREEN        = "|18";  // Green background
+    const char* BG_CYAN         = "|19";  // Cyan background
+    const char* BG_RED          = "|20";  // Red background
+    const char* BG_PURPLE       = "|21";  // Purple background
+    const char* BG_BROWN        = "|22";  // Brown background
+    const char* BG_WHITE        = "|23";  // White background
+    
+    // Additional special codes
+    const char* RESET           = "|RA";  // Reset all attributes
+    const char* BOLD            = "|B1";  // Bold
+    const char* UNDERLINE       = "|U1";  // Underline
+    const char* BLINK           = "|F1";  // Blink
+    const char* REVERSE         = "|R1";  // Reverse (inverse)
+    const char* BOLD_OFF        = "|B0";  // Bold off
+    const char* UNDERLINE_OFF   = "|U0";  // Underline off
+    const char* BLINK_OFF       = "|F0";  // Blink off
+    const char* REVERSE_OFF     = "|R0";  // Reverse off
+}
+
 class qANSI : public Print {
 public:
     // Constructor
-    qANSI(Stream &output = Serial) : _output(output), _cursorVisible(true) {
+    qANSI(Stream &output = Serial) : _output(output), _cursorVisible(true), _pipeCodesEnabled(true) {
         // Initialize state tracking
         _currentFg = qANSI_Colors::FG_DEFAULT;
         _currentBg = qANSI_Colors::BG_DEFAULT;
         _currentAttr = qANSI_Attributes::RESET;
+        
+        // Initialize pipe code processing state
+        _pipeSequenceState = 0;
+        _pipeChar1 = '\0';
     }
 
     // Initialize terminal
@@ -206,10 +239,74 @@ public:
         _sendAnsiCommand("\033[u");
     }
     
-    // Implement Print's write method
-    virtual size_t write(uint8_t c) override {
-        return _output.write(c);
+    // --- Pipe Code Methods ---
+    
+    // Enable or disable pipe code processing
+    void enablePipeCodes(bool enable) {
+        _pipeCodesEnabled = enable;
+        if (!enable) {
+            // Reset pipe code state machine if disabled
+            _pipeSequenceState = 0;
+        }
     }
+    
+    bool arePipeCodesEnabled() const {
+        return _pipeCodesEnabled;
+    }
+    
+    // Implement Print's write method with pipe code handling
+    virtual size_t write(uint8_t c) override {
+        // If pipe codes are disabled, just pass through
+        if (!_pipeCodesEnabled) {
+            return _output.write(c);
+        }
+        
+        // Handle pipe codes
+        switch (_pipeSequenceState) {
+            case 0: // Not in a pipe sequence
+                if (c == '|') {
+                    _pipeSequenceState = 1;
+                    return 1; // Count as written even though we're buffering
+                } else {
+                    return _output.write(c);
+                }
+                break;
+                
+            case 1: // Got a pipe, waiting for first command character
+                _pipeChar1 = c;
+                _pipeSequenceState = 2;
+                return 1;
+                
+            case 2: // Got first command char, waiting for second command char
+                _pipeSequenceState = 0; // Reset state machine
+                return _processPipeCode(_pipeChar1, c);
+                
+            default:
+                _pipeSequenceState = 0;
+                return _output.write(c);
+        }
+    }
+    
+// Write string, processing pipe codes
+size_t print(const char* str) {
+    size_t count = 0;
+    while (*str) {
+        count += write((uint8_t)*str++);
+    }
+    return count;
+}
+
+// Print just a line ending
+size_t println() {
+    return write('\r') + write('\n');
+}
+
+// Print line with pipe code processing
+size_t println(const char* str) {
+    size_t count = print(str);
+    count += println();
+    return count;
+}
     
     // Get current foreground color
     uint8_t getCurrentFgColor() const {
@@ -232,11 +329,81 @@ protected:
     uint8_t _currentBg;
     uint8_t _currentAttr;
     bool _cursorVisible;
+    bool _pipeCodesEnabled;
+    
+    // Pipe code state machine
+    uint8_t _pipeSequenceState;
+    char _pipeChar1;
     
     // Helper to send raw ANSI command string
     void _sendAnsiCommand(const char* command) {
         _output.print(command);
     }
+    
+    // Process pipe code and return how many bytes were "written"
+// Process pipe code and return how many bytes were "written"
+size_t _processPipeCode(char c1, char c2) {
+    // Form the two-digit code
+    int code = (c1 - '0') * 10 + (c2 - '0');
+    
+    // Check for valid code range
+    if (c1 >= '0' && c1 <= '9' && c2 >= '0' && c2 <= '9') {
+        switch (code) {
+            // Foreground colors
+            case 0: setTextColor(qANSI_Colors::FG_BLACK); break;
+            case 1: setTextColor(qANSI_Colors::FG_BLUE); break;
+            case 2: setTextColor(qANSI_Colors::FG_GREEN); break;
+            case 3: setTextColor(qANSI_Colors::FG_CYAN); break;
+            case 4: setTextColor(qANSI_Colors::FG_RED); break;
+            case 5: setTextColor(qANSI_Colors::FG_MAGENTA); break;
+            case 6: setTextColor(qANSI_Colors::FG_YELLOW); break; // Brown in some terminals
+            case 7: setTextColor(qANSI_Colors::FG_WHITE); break;
+            
+            // Bright foreground colors
+            case 8: setTextColor(qANSI_Colors::FG_BRIGHT_BLACK); break; // Dark Grey
+            case 9: setTextColor(qANSI_Colors::FG_BRIGHT_BLUE); break;
+            case 10: setTextColor(qANSI_Colors::FG_BRIGHT_GREEN); break;
+            case 11: setTextColor(qANSI_Colors::FG_BRIGHT_CYAN); break;
+            case 12: setTextColor(qANSI_Colors::FG_BRIGHT_RED); break;
+            case 13: setTextColor(qANSI_Colors::FG_BRIGHT_MAGENTA); break;
+            case 14: setTextColor(qANSI_Colors::FG_BRIGHT_YELLOW); break;
+            case 15: setTextColor(qANSI_Colors::FG_BRIGHT_WHITE); break;
+            
+            // Background colors
+            case 16: setTextBackgroundColor(qANSI_Colors::BG_BLACK); break;
+            case 17: setTextBackgroundColor(qANSI_Colors::BG_BLUE); break;
+            case 18: setTextBackgroundColor(qANSI_Colors::BG_GREEN); break;
+            case 19: setTextBackgroundColor(qANSI_Colors::BG_CYAN); break;
+            case 20: setTextBackgroundColor(qANSI_Colors::BG_RED); break;
+            case 21: setTextBackgroundColor(qANSI_Colors::BG_MAGENTA); break;
+            case 22: setTextBackgroundColor(qANSI_Colors::BG_YELLOW); break; // Brown
+            case 23: setTextBackgroundColor(qANSI_Colors::BG_WHITE); break;
+            
+            // Special codes
+            case 24: resetAttributes(); break;
+            case 25: setTextAttribute(qANSI_Attributes::BOLD); break;
+            case 26: setTextAttribute(qANSI_Attributes::UNDERLINE); break;
+            case 27: setTextAttribute(qANSI_Attributes::BLINK); break;
+            case 28: setTextAttribute(qANSI_Attributes::REVERSE); break;
+            case 29: setTextAttribute(qANSI_Attributes::BOLD_OFF); break;
+            case 30: setTextAttribute(qANSI_Attributes::UNDERLINE_OFF); break;
+            case 31: setTextAttribute(qANSI_Attributes::BLINK_OFF); break;
+            case 32: setTextAttribute(qANSI_Attributes::REVERSE_OFF); break;
+            
+            default:
+                // Not a supported code, output the original sequence
+                _output.write('|');
+                _output.write(c1);
+                return _output.write(c2) + 2;
+        }
+        return 3; // Pipe code handled (3 characters: |nn)
+    } else {
+        // Not a valid numeric code, output the original sequence
+        _output.write('|');
+        _output.write(c1);
+        return _output.write(c2) + 2;
+    }
+}
 };
 
 #endif // Q_ANSI_H
