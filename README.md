@@ -1,283 +1,207 @@
-# qANSI
+# qANSI - Lightweight ANSI Terminal Control Library for Arduino
 
-[![Arduino](https://img.shields.io/badge/Arduino-Compatible-brightgreen)](https://www.arduino.cc/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](https://github.com/yourusername/qANSI/releases)
-
-A lightweight yet powerful Arduino library for enhancing serial output with ANSI colors, text styling, and advanced terminal control. Use qANSI to make your Arduino project's serial output more informative, interactive, and visually appealing.
-
-![qANSI Demo](https://i.postimg.cc/qMb9jCxp/Screenshot-from-2025-04-06-15-17-47.png)
+qANSI is a lightweight yet powerful library for controlling ANSI terminals from Arduino. It provides direct terminal operations and virtual terminal support with optimized rendering.
 
 ## Features
 
-- **Full ANSI Color Support**: 16 standard foreground and background colors plus 24-bit RGB colors
-- **Text Styling**: Bold, italic, underline, blink, reverse, dim, and hidden text
-- **Cursor Control**: Precise cursor positioning and manipulation
-- **BBS-Style Pipe Codes**: Compatibility with Renegade BBS-style `|XX` color codes
-- **Terminal UI Elements**: Boxes, progress bars, spinners, menus, and alerts
-- **Terminal Detection**: Automatic detection of terminal capabilities and dimensions
-- **Buffered Output**: Efficient serial communication with internal buffering
-- **Compatibility**: Works with any Arduino platform that supports HardwareSerial
+### qANSI - Basic ANSI Terminal Control
 
-## Quick Start
+- **Direct Terminal Control**: Cursor positioning, color setting, text attributes
+- **Minimal Memory Footprint**: Efficient implementation for resource-constrained environments
+- **Standard Integration**: Inherits from Arduino's Print class for familiar interface
+- **State Tracking**: Intelligent tracking of terminal state to minimize commands
+
+### qANSI_VT - Virtual Terminal System
+
+- **In-Memory Buffer**: Represents the terminal state in memory for optimal updates
+- **Change Detection**: Only sends ANSI commands for cells that have changed
+- **Multiple Update Strategies**: Adaptive rendering based on change patterns
+- **Position Anywhere**: Place virtual terminals anywhere on the physical screen
+- **Scrolling & Wrapping**: Full support for content overflow with configurable behaviors
+
+## Installation
+
+1. Download the repository
+2. Copy the `qANSI.h` and `qANSI_VT.h` files to your project directory
+3. Include the headers in your sketch
+
+## Basic Usage
+
+### Simple Terminal Control
 
 ```cpp
-#include <qANSI.h>
+#include "qANSI.h"
 
-// Initialize with Serial
-qANSI term(Serial);
+qANSI terminal(Serial);
 
 void setup() {
-  // Start serial communication at 9600 baud
-  term.begin(9600);
+  Serial.begin(115200);
   
-  // Clear the screen
-  term.clearScreen();
+  // Initialize terminal
+  terminal.begin();
+  terminal.clearScreen();
   
-  // Print colored text
-  term.println("Hello, world!", term.brightCyan());
+  // Move cursor and print colored text
+  terminal.setCursor(10, 5);
+  terminal.setTextColor(qANSI_Colors::FG_GREEN);
+  terminal.print("Hello, ANSI Terminal!");
   
-  // Print with BBS-style pipe codes
-  term.println("|09This is |12bright red|09 and this is |11bright cyan|09!");
-  
-  // Draw a box with a title
-  term.drawBox(40, 5, "qANSI Demo");
+  // Add some styling
+  terminal.setCursor(10, 7);
+  terminal.setTextAttribute(qANSI_Attributes::BOLD);
+  terminal.setTextColor(qANSI_Colors::FG_RED);
+  terminal.print("This text is bold and red!");
 }
 
 void loop() {
-  // Draw a progress bar that updates
-  static float progress = 0.0;
-  term.drawProgressBar(30, progress, "Loading");
-  progress += 0.01;
-  if (progress > 1.0) progress = 0.0;
-  delay(100);
+  // Your code here
 }
 ```
 
-## API Reference
-
-### Initialization
+### Virtual Terminal Example
 
 ```cpp
-// Create a qANSI instance attached to a HardwareSerial port
-qANSI term(Serial);
+#include "qANSI.h"
+#include "qANSI_VT.h"
 
-// Begin serial communication
-term.begin(unsigned long baud);
+// Create a virtual terminal of size 30x10 positioned at (5,5)
+qANSI_VT vt(30, 10, 5, 5, Serial);
 
-// Enable/disable ANSI escape sequences
-term.enableAnsi(bool enable);
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize a virtual terminal
+  vt.begin(qANSI_Colors::FG_WHITE, qANSI_Colors::BG_BLUE);
+  vt.clear();
+  
+  // Set text properties
+  vt.setTextColor(qANSI_Colors::FG_YELLOW);
+  vt.setTextAttribute(qANSI_Attributes::BOLD);
+  
+  // Print to the virtual terminal
+  vt.setCursor(1, 1);
+  vt.println("This is a virtual terminal!");
+  vt.println("It has its own buffer and");
+  vt.println("only updates what changes.");
+  
+  // Display the terminal content
+  vt.display();
+}
 
-// Enable/disable pipe code parsing
-term.enablePipeCodes(bool enable);
-
-// Auto-detect terminal capabilities and dimensions
-term.detectTerminal([timeout_ms]);
-
-// Get terminal dimensions
-int width = term.getTerminalWidth();
-int height = term.getTerminalHeight();
+void loop() {
+  // Update content
+  static unsigned long lastUpdate = 0;
+  if (millis() - lastUpdate > 1000) {
+    // Print the current millis
+    vt.setCursor(1, 5);
+    vt.print("Millis: ");
+    vt.print(millis());
+    
+    // Update the screen - only changed cells will be redrawn
+    vt.display();
+    
+    lastUpdate = millis();
+  }
+}
 ```
 
-### Text Output
+## Multiple Virtual Terminals
 
 ```cpp
-// Print methods
-term.print(text, [ansiColor]);
-term.print(number, [ansiColor]);
-term.print(float, [digits], [ansiColor]);
+#include "qANSI.h"
+#include "qANSI_VT.h"
 
-// Println methods
-term.println(text, [ansiColor]);
-term.println(number, [ansiColor]);
-term.println(float, [digits], [ansiColor]);
+// Create two virtual terminals
+qANSI_VT vt1(20, 8, 2, 2, Serial);  // 20x8 at position (2,2)
+qANSI_VT vt2(20, 8, 2, 12, Serial); // 20x8 at position (2,12)
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Initialize terminal 1 - Blue background
+  vt1.begin(qANSI_Colors::FG_WHITE, qANSI_Colors::BG_BLUE);
+  vt1.clear();
+  vt1.println("Terminal 1");
+  vt1.display();
+  
+  // Initialize terminal 2 - Red background
+  vt2.begin(qANSI_Colors::FG_WHITE, qANSI_Colors::BG_RED);
+  vt2.clear();
+  vt2.println("Terminal 2");
+  vt2.display();
+}
+
+void loop() {
+  // Update terminals independently
+  static unsigned long lastUpdate1 = 0;
+  static unsigned long lastUpdate2 = 0;
+  
+  // Update terminal 1 every second
+  if (millis() - lastUpdate1 > 1000) {
+    vt1.setCursor(1, 3);
+    vt1.print("Update: ");
+    vt1.print(millis() / 1000);
+    vt1.display();
+    lastUpdate1 = millis();
+  }
+  
+  // Update terminal 2 every 1.5 seconds
+  if (millis() - lastUpdate2 > 1500) {
+    vt2.setCursor(1, 3);
+    vt2.print("Update: ");
+    vt2.print(millis() / 1000);
+    vt2.display();
+    lastUpdate2 = millis();
+  }
+}
 ```
 
-### Terminal Control
+## Advanced Features
+
+### Line Wrapping and Scrolling
 
 ```cpp
-// Screen and cursor control
-term.clearScreen();
-term.clearLine();
-term.moveCursor(row, column);
-term.saveCursor();
-term.restoreCursor();
-term.cursorUp([lines]);
-term.cursorDown([lines]);
-term.cursorRight([columns]);
-term.cursorLeft([columns]);
+// Enable automatic line wrapping
+vt.setLineWrapping(true);
+
+// Enable automatic scrolling when cursor moves past bottom
+vt.setScrolling(true);
+
+// Manually scroll up by 2 lines
+vt.scrollUp(2);
 ```
 
-### UI Elements
+### Cursor Control
 
 ```cpp
-// Box drawing with different styles
-term.drawBox(width, height, [title], [style], [color]);
+// Show or hide the cursor
+vt.setCursorVisible(true);
 
-// Progress bar with different styles
-term.drawProgressBar(width, progress, [label], [style], [fillColor], [emptyColor]);
+// Position the cursor
+vt.setCursor(10, 5);
 
-// Spinner animation
-term.drawSpinner(style, frame, [label], [color]);
-
-// Menu with selectable items
-term.drawMenu(items[], itemCount, selectedIndex, [title]);
-
-// Information alerts with icons
-term.drawAlert(message, [type]); // 0=info, 1=success, 2=warning, 3=error
+// Get current cursor position
+uint8_t x = vt.getCursorX();
+uint8_t y = vt.getCursorY();
 ```
 
-### Color and Style Constants
+### Debug Mode
 
 ```cpp
-// Text styles
-term.reset()      // Reset all styles and colors
-term.bold()       // Bold text
-term.dim()        // Dim text
-term.italic()     // Italic text
-term.underline()  // Underlined text
-term.blink()      // Blinking text
-term.reverse()    // Reversed colors
-term.hidden()     // Hidden text
-
-// Foreground colors
-term.black()
-term.red()
-term.green()
-term.yellow()
-term.blue()
-term.magenta()
-term.cyan()
-term.white()
-term.brightBlack()
-term.brightRed()
-term.brightGreen()
-term.brightYellow()
-term.brightBlue()
-term.brightMagenta()
-term.brightCyan()
-term.brightWhite()
-
-// Background colors
-term.bgBlack()
-term.bgRed()
-term.bgGreen()
-term.bgYellow()
-term.bgBlue()
-term.bgMagenta()
-term.bgCyan()
-term.bgWhite()
-term.bgBrightBlack()
-term.bgBrightRed()
-term.bgBrightGreen()
-term.bgBrightYellow()
-term.bgBrightBlue()
-term.bgBrightMagenta()
-term.bgBrightCyan()
-term.bgBrightWhite()
-
-// RGB Colors (24-bit true color)
-term.rgb(r, g, b)       // RGB foreground color
-term.bgRgb(r, g, b)     // RGB background color
-
-// Combine colors
-term.colorCombine(foregroundColor, backgroundColor)
+// Print with detailed cursor movement tracing
+vt.debugPrint("This will trace every character");
 ```
 
-### Box and UI Styles
+## Optimization Notes
 
-```cpp
-// Box styles
-term.BOX_SINGLE_LINE   // ┌─┐│└┘
-term.BOX_DOUBLE_LINE   // ╔═╗║╚╝
-term.BOX_ROUNDED       // ╭─╮│╰╯
-term.BOX_BOLD          // ┏━┓┃┗┛
+The virtual terminal implementation uses three different update strategies to optimize performance:
 
-// Progress bar styles
-term.PROGRESS_SHARP    // [####    ]
-term.PROGRESS_BLOCK    // [████    ]
-term.PROGRESS_BAR      // [▓▓▓▓    ]
-term.PROGRESS_EQUAL    // [====    ]
-```
+1. **Full Redraw**: Used when most cells have changed or on first display
+2. **Row-Based Update**: Redraws entire rows that contain any changes
+3. **Sparse Update**: Targets only specific changed cells when changes are minimal
 
-## BBS Pipe Code Reference
-
-qANSI supports Renegade BBS-style pipe codes for easy text coloring:
-
-| Pipe Code | Color/Style        | Pipe Code | Color/Style         |
-|-----------|---------------------|-----------|---------------------|
-| \|00      | Black               | \|08      | Gray                |
-| \|01      | Blue                | \|09      | Bright Blue         |
-| \|02      | Green               | \|10      | Bright Green        |
-| \|03      | Cyan                | \|11      | Bright Cyan         |
-| \|04      | Red                 | \|12      | Bright Red          |
-| \|05      | Magenta             | \|13      | Bright Magenta      |
-| \|06      | Yellow/Brown        | \|14      | Bright Yellow       |
-| \|07      | White               | \|15      | Bright White        |
-| \|16      | Reset               | \|b0-\|b9 | Background colors   |
-| \|BD      | Bold                | \|IT      | Italic              |
-| \|UL      | Underline           | \|BL      | Blink               |
-| \|RV      | Reverse             | \|RS      | Reset               |
-| \|DM      | Dim                 | \|HI      | Hidden              |
-
-## Terminal Compatibility
-
-For best results, use qANSI with terminals that support ANSI escape sequences:
-
-- Arduino Serial Monitor (limited support)
-- PuTTY
-- Tera Term
-- minicom
-- screen
-- Windows Terminal
-- iTerm2
-- Most modern terminal emulators
-
-## Examples
-
-The library includes several examples to help you get started:
-
-- **BasicColors**: Demonstrates basic color output
-- **TextStyles**: Shows different text styling options
-- **PipeCodes**: Example of using BBS-style pipe codes
-- **CursorControl**: Demonstrates cursor positioning
-- **ProgressBar**: Creating an animated progress bar
-- **DrawBox**: Creating boxed UI elements
-- **Spinner**: Creating animated spinners
-- **Menu**: Interactive menu selection
-- **AlertsAndNotifications**: Information display system
-- **RGBColors**: Using 24-bit color support
-- **TerminalDetection**: Auto-detecting terminal capabilities
-- **Dashboard**: A complete example showing a system monitoring dashboard
-
-Access examples from the Arduino IDE: **File > Examples > qANSI**
-
-## Memory Optimization
-
-qANSI is designed to be efficient with Arduino's limited memory:
-
-- Uses PROGMEM to store constant strings
-- Implements buffered output to reduce serial communication overhead
-- Offers method to control ANSI feature usage for minimal memory footprint
-- Static return values to reduce heap fragmentation
-
-## Performance Considerations
-
-- ANSI escape sequences add overhead to serial communication
-- For timing-critical applications, consider disabling ANSI support when not needed
-- The drawProgressBar() and drawSpinner() methods are optimized for overwriting the same line
-- Internal buffering helps reduce serial communication overhead
-
-## Contributing
-
-Contributions to qANSI are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+These strategies are automatically selected based on the pattern of changes to minimize the amount of data sent to the terminal.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License
