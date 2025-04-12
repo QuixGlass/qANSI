@@ -4,7 +4,9 @@ A powerful yet compact library for controlling ANSI terminals from Arduino, prov
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![qANSI Demo](https://github.com/QuixGlass/qANSI/raw/main/assets/qANSI.gif)
+![qANSI Demo](https://github.com/QuixGlass/qANSI/blob/main/qANSI.gif?raw=true)
+
+
 
 ## 📋 Features
 
