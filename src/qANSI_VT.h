@@ -342,6 +342,157 @@ size_t println() {
     return n;
   }
 
+
+
+// Add these methods to qANSI_VT.h
+
+// --- Integer print variants ---
+size_t print(int n, int base = DEC) {
+  char buf[8 * sizeof(int) + 1]; // Enough space for binary representation
+  itoa(n, buf, base);
+  return print(buf);
+}
+
+size_t print(unsigned int n, int base = DEC) {
+  char buf[8 * sizeof(unsigned int) + 1];
+  utoa(n, buf, base);
+  return print(buf);
+}
+
+size_t print(long n, int base = DEC) {
+  char buf[8 * sizeof(long) + 1];
+  ltoa(n, buf, base);
+  return print(buf);
+}
+
+size_t print(unsigned long n, int base = DEC) {
+  char buf[8 * sizeof(unsigned long) + 1];
+  ultoa(n, buf, base);
+  return print(buf);
+}
+
+// --- Floating point print variants ---
+size_t print(double n, int digits = 2) {
+  char buf[32]; // Should be sufficient for most double values with reasonable precision
+  
+  // Handle negative numbers
+  size_t count = 0;
+  if (n < 0.0) {
+    count += print('-');
+    n = -n;
+  }
+  
+  // Extract the integer part
+  unsigned long int_part = (unsigned long)n;
+  double remainder = n - (double)int_part;
+  
+  // Print integer part
+  count += print(int_part);
+  
+  // Handle decimal part if needed
+  if (digits > 0) {
+    count += print('.');
+    
+    // Scale the remainder to the desired precision
+    while (digits-- > 0) {
+      remainder *= 10.0;
+      int digit = (int)remainder;
+      count += print(digit);
+      remainder -= digit;
+    }
+  }
+  
+  return count;
+}
+
+// Alias for float (uses the double implementation)
+size_t print(float n, int digits = 2) {
+  return print((double)n, digits);
+}
+
+// --- String type variants ---
+#ifdef Arduino_h
+size_t print(const String &s) {
+  return print(s.c_str());
+}
+
+size_t print(const __FlashStringHelper *ifsh) {
+  PGM_P p = reinterpret_cast<PGM_P>(ifsh);
+  size_t count = 0;
+  while (1) {
+    unsigned char c = pgm_read_byte(p++);
+    if (c == 0) break;
+    if (write(c)) count++;
+  }
+  return count;
+}
+
+// For custom Printable objects
+size_t print(const Printable &p) {
+  struct PrintableProxy : public Print {
+    PrintableProxy(qANSI_VT *parent) : _parent(parent), _count(0) {}
+    size_t write(uint8_t c) override {
+      if (_parent->write(c)) _count++;
+      return 1;
+    }
+    qANSI_VT *_parent;
+    size_t _count;
+  } proxy(this);
+  
+  size_t n = p.printTo(proxy);
+  return proxy._count;
+}
+#endif
+
+// --- Println variants for all types ---
+size_t println(int num, int base = DEC) {
+  size_t n = print(num, base);
+  return n + println();
+}
+
+size_t println(unsigned int num, int base = DEC) {
+  size_t n = print(num, base);
+  return n + println();
+}
+
+size_t println(long num, int base = DEC) {
+  size_t n = print(num, base);
+  return n + println();
+}
+
+size_t println(unsigned long num, int base = DEC) {
+  size_t n = print(num, base);
+  return n + println();
+}
+
+size_t println(double num, int digits = 2) {
+  size_t n = print(num, digits);
+  return n + println();
+}
+
+size_t println(float num, int digits = 2) {
+  return println((double)num, digits);
+}
+
+#ifdef Arduino_h
+size_t println(const String &s) {
+  size_t n = print(s);
+  return n + println();
+}
+
+size_t println(const __FlashStringHelper *ifsh) {
+  size_t n = print(ifsh);
+  return n + println();
+}
+
+size_t println(const Printable &p) {
+  size_t n = print(p);
+  return n + println();
+}
+#endif
+
+
+
   // --- Write Character (Core Print Method) ---
 virtual size_t write(uint8_t c) override {
   if (!_buffer || _width == 0 || _height == 0) return 0;
