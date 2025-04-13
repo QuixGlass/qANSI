@@ -100,7 +100,7 @@ namespace qANSI_PipeCodes {
 class qANSI : public Print {
 public:
     // Constructor
-    qANSI(Stream &output = Serial) : _output(output), _cursorVisible(true), _pipeCodesEnabled(true) {
+    qANSI(Stream &output = Serial) : _output(output), _cursorVisible(false), _pipeCodesEnabled(true) {
         // Initialize state tracking
         _currentFg = qANSI_Colors::FG_DEFAULT;
         _currentBg = qANSI_Colors::BG_DEFAULT;
